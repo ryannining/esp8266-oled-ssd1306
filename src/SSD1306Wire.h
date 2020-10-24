@@ -33,66 +33,37 @@
 
 #include "OLEDDisplay.h"
 #include <Wire.h>
-#include <algorithm>
 
-#if defined(ARDUINO_ARCH_AVR) || defined(ARDUINO_ARCH_STM32)
+#ifdef ARDUINO_ARCH_AVR
 #define _min	min
 #define _max	max
 #endif
-//--------------------------------------
 
 class SSD1306Wire : public OLEDDisplay {
   private:
       uint8_t             _address;
-      int                 _sda;
-      int                 _scl;
+      uint8_t             _sda;
+      uint8_t             _scl;
       bool                _doI2cAutoInit = false;
-      TwoWire*            _wire = NULL;
-      int                 _frequency;
 
   public:
-
-    /**
-     * Create and initialize the Display using Wire library
-     *
-     * Beware for retro-compatibility default values are provided for all parameters see below.
-     * Please note that if you don't wan't SD1306Wire to initialize and change frequency speed ot need to 
-     * ensure -1 value are specified for all 3 parameters. This can be usefull to control TwoWire with multiple
-     * device on the same bus.
-     * 
-     * @param _address I2C Display address
-     * @param _sda I2C SDA pin number, default to -1 to skip Wire begin call
-     * @param _scl I2C SCL pin number, default to -1 (only SDA = -1 is considered to skip Wire begin call)
-     * @param g display geometry dafault to generic GEOMETRY_128_64, see OLEDDISPLAY_GEOMETRY definition for other options
-     * @param _i2cBus on ESP32 with 2 I2C HW buses, I2C_ONE for 1st Bus, I2C_TWO fot 2nd bus, default I2C_ONE
-     * @param _frequency for Frequency by default Let's use ~700khz if ESP8266 is in 160Mhz mode, this will be limited to ~400khz if the ESP8266 in 80Mhz mode
-     */
-    SSD1306Wire(uint8_t _address, int _sda = -1, int _scl = -1, OLEDDISPLAY_GEOMETRY g = GEOMETRY_128_64, HW_I2C _i2cBus = I2C_ONE, int _frequency = 700000) {
+    SSD1306Wire(uint8_t _address, uint8_t _sda, uint8_t _scl, OLEDDISPLAY_GEOMETRY g = GEOMETRY_128_64) {
       setGeometry(g);
 
       this->_address = _address;
       this->_sda = _sda;
       this->_scl = _scl;
-#if !defined(ARDUINO_ARCH_ESP32)
-      this->_wire = &Wire;
-#else
-      this->_wire = (_i2cBus==I2C_ONE) ? &Wire : &Wire1;
-#endif
-      this->_frequency = _frequency;
     }
 
     bool connect() {
-#if !defined(ARDUINO_ARCH_ESP32) && !defined(ARDUINO_ARCH8266)
-      _wire->begin();
+#ifdef ARDUINO_ARCH_AVR 
+      Wire.begin();
 #else
-      // On ESP32 arduino, -1 means 'don't change pins', someone else has called begin for us.
-      if(this->_sda != -1)
-        _wire->begin(this->_sda, this->_scl);
+      Wire.begin(this->_sda, this->_scl);
 #endif
       // Let's use ~700khz if ESP8266 is in 160Mhz mode
       // this will be limited to ~400khz if the ESP8266 in 80Mhz mode.
-      if(this->_frequency != -1)
-        _wire->setClock(this->_frequency);
+      Wire.setClock(700000);
       return true;
     }
 
@@ -112,11 +83,12 @@ class SSD1306Wire : public OLEDDisplay {
         for (y = 0; y < (this->height() / 8); y++) {
           for (x = 0; x < this->width(); x++) {
            uint16_t pos = x + y * this->width();
-           if (buffer[pos] != buffer_back[pos]) {
-             minBoundY = std::min(minBoundY, y);
-             maxBoundY = std::max(maxBoundY, y);
-             minBoundX = std::min(minBoundX, x);
-             maxBoundX = std::max(maxBoundX, x);
+           if (buffer[pos] != buffer_back[pos])
+           {
+             minBoundY = _min(minBoundY, y);
+             maxBoundY = _max(maxBoundY, y);
+             minBoundX = _min(minBoundX, x);
+             maxBoundX = _max(maxBoundX, x);
            }
            buffer_back[pos] = buffer[pos];
          }
@@ -141,14 +113,14 @@ class SSD1306Wire : public OLEDDisplay {
         for (y = minBoundY; y <= maxBoundY; y++) {
           for (x = minBoundX; x <= maxBoundX; x++) {
             if (k == 0) {
-              _wire->beginTransmission(_address);
-              _wire->write(0x40);
+              Wire.beginTransmission(_address);
+              Wire.write(0x40);
             }
 
-            _wire->write(buffer[x + y * this->width()]);
+            Wire.write(buffer[x + y * this->width()]);
             k++;
             if (k == 16)  {
-              _wire->endTransmission();
+              Wire.endTransmission();
               k = 0;
             }
           }
@@ -156,7 +128,7 @@ class SSD1306Wire : public OLEDDisplay {
         }
 
         if (k != 0) {
-          _wire->endTransmission();
+          Wire.endTransmission();
         }
       #else
 
@@ -174,14 +146,14 @@ class SSD1306Wire : public OLEDDisplay {
         }
 
         for (uint16_t i=0; i < displayBufferSize; i++) {
-          _wire->beginTransmission(this->_address);
-          _wire->write(0x40);
+          Wire.beginTransmission(this->_address);
+          Wire.write(0x40);
           for (uint8_t x = 0; x < 16; x++) {
-            _wire->write(buffer[i]);
+            Wire.write(buffer[i]);
             i++;
           }
           i--;
-          _wire->endTransmission();
+          Wire.endTransmission();
         }
       #endif
     }
@@ -196,18 +168,18 @@ class SSD1306Wire : public OLEDDisplay {
 	}
     inline void sendCommand(uint8_t command) __attribute__((always_inline)){
       initI2cIfNeccesary();
-      _wire->beginTransmission(_address);
-      _wire->write(0x80);
-      _wire->write(command);
-      _wire->endTransmission();
+      Wire.beginTransmission(_address);
+      Wire.write(0x80);
+      Wire.write(command);
+      Wire.endTransmission();
     }
 
     void initI2cIfNeccesary() {
       if (_doI2cAutoInit) {
-#if !defined(ARDUINO_ARCH_ESP32) && !defined(ARDUINO_ARCH8266)
-      	_wire->begin();
+#ifdef ARDUINO_ARCH_AVR 
+      	Wire.begin();
 #else
-      	_wire->begin(this->_sda, this->_scl);
+      	Wire.begin(this->_sda, this->_scl);
 #endif
       }
     }

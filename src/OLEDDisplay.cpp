@@ -36,6 +36,7 @@
   */
 
 #include "OLEDDisplay.h"
+extern int motionloop();
 
 OLEDDisplay::OLEDDisplay() {
 
@@ -56,7 +57,7 @@ OLEDDisplay::OLEDDisplay() {
 OLEDDisplay::~OLEDDisplay() {
   end();
 }
-
+#define DEBUG_OLEDDISPLAY Serial.println
 bool OLEDDisplay::allocateBuffer() {
 
   logBufferSize = 0;
@@ -126,6 +127,9 @@ void OLEDDisplay::resetDisplay(void) {
 
 void OLEDDisplay::setColor(OLEDDISPLAY_COLOR color) {
   this->color = color;
+}
+void OLEDDisplay::setRotate(bool rot) {
+
 }
 
 OLEDDISPLAY_COLOR OLEDDisplay::getColor() {
@@ -315,6 +319,7 @@ void OLEDDisplay::drawHorizontalLine(int16_t x, int16_t y, int16_t length) {
   }
 
   if (length <= 0) { return; }
+  motionloop();
 
   uint8_t * bufferPtr = buffer;
   bufferPtr += (y >> 3) * this->width();
@@ -337,7 +342,7 @@ void OLEDDisplay::drawHorizontalLine(int16_t x, int16_t y, int16_t length) {
 
 void OLEDDisplay::drawVerticalLine(int16_t x, int16_t y, int16_t length) {
   if (x < 0 || x >= this->width()) return;
-
+  
   if (y < 0) {
     length += y;
     y = 0;
@@ -349,7 +354,8 @@ void OLEDDisplay::drawVerticalLine(int16_t x, int16_t y, int16_t length) {
 
   if (length <= 0) return;
 
-
+  motionloop();
+  
   uint8_t yOffset = y & 7;
   uint8_t drawBit;
   uint8_t *bufferPtr = buffer;
@@ -520,6 +526,7 @@ void OLEDDisplay::drawStringInternal(int16_t xMove, int16_t yMove, char* text, u
 }
 
 
+
 void OLEDDisplay::drawString(int16_t xMove, int16_t yMove, String strUser) {
   uint16_t lineHeight = pgm_read_byte(fontData + HEIGHT_POS);
 
@@ -536,7 +543,7 @@ void OLEDDisplay::drawString(int16_t xMove, int16_t yMove, String strUser) {
       lb += (text[i] == 10);
     }
     // Calculate center
-    yOffset = (lb * lineHeight) / 2;
+    yOffset = (lb * lineHeight) / 2; // added offset
   }
 
   uint16_t line = 0;
@@ -837,6 +844,18 @@ int OLEDDisplay::_putc(int c) {
 void OLEDDisplay::setGeometry(OLEDDISPLAY_GEOMETRY g, uint16_t width, uint16_t height) {
   this->geometry = g;
   switch (g) {
+  	case GEOMETRY_80_64:
+    	this->displayWidth = 80;
+    	this->displayHeight = 64;
+		break;
+  	case GEOMETRY_96_68:
+    	this->displayWidth = 96;
+    	this->displayHeight = 72;
+		break;
+  	case GEOMETRY_192_64:
+    	this->displayWidth = 192;
+    	this->displayHeight = 64;
+		break;
   	case GEOMETRY_128_64:
     	this->displayWidth = 128;
     	this->displayHeight = 64;
@@ -844,6 +863,10 @@ void OLEDDisplay::setGeometry(OLEDDISPLAY_GEOMETRY g, uint16_t width, uint16_t h
 	case GEOMETRY_128_32:
     	this->displayWidth = 128;
     	this->displayHeight = 32;
+		break;
+	case GEOMETRY_160_130:
+    	this->displayWidth = 160;
+    	this->displayHeight = 130;
 		break;
 	case GEOMETRY_RAWMODE:
 		this->displayWidth = width > 0 ? width : 128;
@@ -900,7 +923,6 @@ void inline OLEDDisplay::drawInternal(int16_t xMove, int16_t yMove, int16_t widt
   if (width < 0 || height < 0) return;
   if (yMove + height < 0 || yMove > this->height())  return;
   if (xMove + width  < 0 || xMove > this->width())   return;
-
   uint8_t  rasterHeight = 1 + ((height - 1) >> 3); // fast ceil(height / 8.0)
   int8_t   yOffset      = yMove & 7;
 
@@ -959,9 +981,11 @@ void inline OLEDDisplay::drawInternal(int16_t xMove, int16_t yMove, int16_t widt
         // and setting the new yOffset
         yOffset = 8 - yOffset;
       }
+
 #ifndef __MBED__
       yield();
 #endif
+  motionloop();
     }
   }
 }

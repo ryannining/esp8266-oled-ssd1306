@@ -63,7 +63,7 @@ private:
 
 #include "OLEDDisplayFonts.h"
 
-//#define DEBUG_OLEDDISPLAY(...) Serial.printf( __VA_ARGS__ )
+#define DEBUG_OLEDDISPLAY(...) Serial.printf( __VA_ARGS__ )
 //#define DEBUG_OLEDDISPLAY(...) dprintf("%s",  __VA_ARGS__ )
 
 #ifndef DEBUG_OLEDDISPLAY
@@ -138,12 +138,12 @@ enum OLEDDISPLAY_TEXT_ALIGNMENT {
 enum OLEDDISPLAY_GEOMETRY {
   GEOMETRY_128_64   = 0,
   GEOMETRY_128_32,
+  GEOMETRY_192_64,
+  GEOMETRY_96_68,
+  GEOMETRY_80_64,
+  GEOMETRY_160_130,
+  
   GEOMETRY_RAWMODE,
-};
-
-enum HW_I2C {
-  I2C_ONE,
-  I2C_TWO
 };
 
 typedef char (*FontTableLookupFunction)(const uint8_t ch);
@@ -182,6 +182,7 @@ class OLEDDisplay : public Stream {
     /* Drawing functions */
     // Sets the color of all pixel operations
     void setColor(OLEDDISPLAY_COLOR color);
+    void setRotate(bool rot);
 
     // Returns the current color.
     OLEDDISPLAY_COLOR getColor();
