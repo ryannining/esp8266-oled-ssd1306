@@ -426,4 +426,4 @@ This shows the code working on the SPI version of the display. See demo code for
  * [Scan I2C](https://github.com/hallard/Scan-I2C-WiFi) (by @hallard)
  * [ThingPulse Weather Station](https://github.com/ThingPulse/esp8266-weather-station)
  * [Meshtastic](https://www.meshtastic.org/) - an open source GPS communicator mesh radio
- * Yours?
+ * [Wifi CNC firmware](https://github.com/ryannining/karyacontroller/) - Full featured CNC firmware for ESP8266, with GUI LCD and Remote. (by @ryannining)
